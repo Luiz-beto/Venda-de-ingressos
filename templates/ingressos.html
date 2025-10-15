@@ -1,0 +1,658 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚽ Ingressos</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: url('https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1920') center/cover fixed;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 0;
+        }
+
+        .conteiner { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            position: relative;
+            z-index: 1;
+        }
+
+        .cabecalho {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        h1 { 
+            color: #1e3a8a; 
+            font-size: 32px; 
+            margin-bottom: 10px;
+        }
+
+        .subtitulo {
+            color: #64748b;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .botoes {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .botao {
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .botao:hover { transform: translateY(-2px); }
+        .botao-admin { background: #f59e0b; color: white; }
+        .botao-cliente { background: #10b981; color: white; }
+
+        /* MODAL NOME */
+        .modal-nome {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-nome.ativo {
+            display: flex;
+        }
+
+        .modal-conteudo {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .modal-conteudo h2 {
+            color: #1e3a8a;
+            margin-bottom: 20px;
+        }
+
+        .modal-conteudo input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            margin: 15px 0;
+        }
+
+        .modal-conteudo input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .painel { display: none; }
+        .painel.ativo { display: block; }
+
+        .jogos {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .jogo {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .prevenda-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #ef4444;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            animation: pulsar 1s infinite;
+        }
+
+        @keyframes pulsar {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .times {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .time {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .escudo {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+        }
+
+        .nome-time {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .vs {
+            font-size: 20px;
+            font-weight: 700;
+            color: #94a3b8;
+        }
+
+        .preco {
+            font-size: 32px;
+            color: #10b981;
+            font-weight: 700;
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .preco-original {
+            text-decoration: line-through;
+            color: #94a3b8;
+            font-size: 20px;
+            margin-right: 10px;
+        }
+
+        .info {
+            text-align: center;
+            padding: 12px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .disponivel { background: #d1fae5; color: #065f46; }
+        .esgotado { background: #fee2e2; color: #991b1b; }
+        .prevenda-info { background: #fef3c7; color: #92400e; }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .form-linha {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .label {
+            display: block;
+            color: #475569;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            margin-top: 8px;
+        }
+
+        .botao-acao {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: all 0.2s;
+        }
+
+        .botao-acao:hover { transform: translateY(-2px); }
+        .botao-liberar { background: #f59e0b; color: white; }
+        .botao-comprar { background: #3b82f6; color: white; }
+        .botao-comprar:disabled { background: #cbd5e0; cursor: not-allowed; }
+
+        .timer-prevenda {
+            text-align: center;
+            font-size: 28px;
+            font-weight: 700;
+            color: #ef4444;
+            margin: 10px 0;
+        }
+
+        .vendas {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .vendas h3 {
+            color: #1e3a8a;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .venda {
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #10b981;
+        }
+
+        .venda.prevenda {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+
+        .badge-prevenda {
+            display: inline-block;
+            background: #f59e0b;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-left: 8px;
+        }
+
+        /* MONITOR DE CLIENTES */
+        .monitor-clientes {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .monitor-clientes h3 {
+            color: #1e3a8a;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .cliente-item {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .cliente-info {
+            flex: 1;
+        }
+
+        .cliente-nome {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 15px;
+        }
+
+        .cliente-acao {
+            color: #64748b;
+            font-size: 13px;
+            margin-top: 3px;
+        }
+
+        .cliente-hora {
+            color: #94a3b8;
+            font-size: 12px;
+        }
+
+        .status-online {
+            width: 10px;
+            height: 10px;
+            background: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            animation: pulse-online 2s infinite;
+        }
+
+        @keyframes pulse-online {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .notif {
+            position: fixed;
+            top: 20px; 
+            right: 20px;
+            padding: 18px 30px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            z-index: 2000;
+            animation: entrar 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        @keyframes entrar {
+            from { transform: translateX(400px); }
+            to { transform: translateX(0); }
+        }
+
+        .notif.ok { background: #10b981; }
+        .notif.erro { background: #ef4444; }
+
+        .online {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            margin-top: 15px;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .jogos { grid-template-columns: 1fr; }
+            .form-linha { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="conteiner">
+        <div class="cabecalho">
+            <h1>⚽ VENDA DE INGRESSOS</h1>
+            <p class="subtitulo">Pré-venda com 10% de desconto nos primeiros 10 segundos!</p>
+            
+            <div class="botoes" id="escolha">
+                <button class="botao botao-admin" onclick="escolher('admin')">🔑 ADMIN</button>
+                <button class="botao botao-cliente" onclick="escolherCliente()">🎫 CLIENTE</button>
+            </div>
+
+            <div class="online">👥 <span id="online">0</span> online</div>
+        </div>
+
+        <!-- ADMIN -->
+        <div class="painel" id="admin">
+            <!-- MONITOR DE CLIENTES -->
+            <div class="monitor-clientes">
+                <h3>
+                    <span class="status-online"></span>
+                    👥 Clientes Online em Tempo Real
+                </h3>
+                <div id="listaClientes">
+                    <div style="text-align: center; color: #94a3b8; padding: 20px;">
+                        Nenhum cliente conectado no momento
+                    </div>
+                </div>
+            </div>
+
+            <div class="jogos" id="jogosAdmin"></div>
+        </div>
+
+        <!-- CLIENTE -->
+        <div class="painel" id="cliente">
+            <div class="jogos" id="jogosCliente"></div>
+        </div>
+
+        <!-- VENDAS -->
+        <div class="vendas" style="display: none;" id="painelVendas">
+            <h3>📋 Histórico de Vendas</h3>
+            <div id="listaVendas"></div>
+        </div>
+    </div>
+
+    <!-- MODAL NOME DO CLIENTE -->
+    <div class="modal-nome" id="modalNome">
+        <div class="modal-conteudo">
+            <h2>🎫 Bem-vindo!</h2>
+            <p style="color: #64748b; margin-bottom: 20px;">Digite seu nome para continuar</p>
+            <input type="text" id="inputNome" placeholder="Seu nome completo" maxlength="50">
+            <button class="botao botao-cliente" style="width: 100%;" onclick="confirmarNome()">
+                ENTRAR
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let tipo = null;
+        let nomeUsuario = null;
+        let todosJogos = {};
+
+        socket.on('connect', function() {
+            console.log('✅ Conectado!');
+        });
+
+        socket.on('inicio', function(data) {
+            todosJogos = data.jogos;
+            mostrar();
+            if (data.vendas.length > 0) {
+                document.getElementById('painelVendas').style.display = 'block';
+                data.vendas.forEach(function(v) {
+                    addVenda(v);
+                });
+            }
+        });
+
+        socket.on('online', function(total) {
+            document.getElementById('online').textContent = total;
+        });
+
+        socket.on('atualizar_jogo', function(data) {
+            todosJogos[data.id] = data.jogo;
+            mostrar();
+        });
+
+        socket.on('atualizar_clientes', function(clientes) {
+            const lista = document.getElementById('listaClientes');
+            if (clientes.length === 0) {
+                lista.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">Nenhum cliente conectado no momento</div>';
+            } else {
+                lista.innerHTML = clientes.map(function(c) {
+                    return '<div class="cliente-item"><div class="cliente-info"><div class="cliente-nome">👤 ' + c.nome + '</div><div class="cliente-acao">' + c.acao + '</div></div><div class="cliente-hora">' + c.hora + '</div></div>';
+                }).join('');
+            }
+        });
+
+        socket.on('prevenda_iniciada', function(data) {
+            console.log('Pré-venda iniciada para jogo ' + data.id);
+        });
+
+        socket.on('tick_timer', function(data) {
+            const timerEl = document.getElementById('timer_' + data.id);
+            if (timerEl) {
+                timerEl.textContent = '⏰ ' + data.tempo + 's';
+            }
+        });
+
+        socket.on('prevenda_finalizada', function(data) {
+            avisar('⏰ Pré-venda finalizada! Preço normal agora.', 'ok');
+        });
+
+        socket.on('nova_venda', function(venda) {
+            document.getElementById('painelVendas').style.display = 'block';
+            addVenda(venda);
+            avisar('🎫 ' + venda.nome + ' comprou ' + venda.qtd + ' ingresso(s)!', 'ok');
+        });
+
+        socket.on('ok', function(msg) {
+            avisar(msg, 'ok');
+        });
+
+        socket.on('erro', function(msg) {
+            avisar(msg, 'erro');
+        });
+
+        function escolher(t) {
+            tipo = t;
+            document.getElementById('escolha').style.display = 'none';
+            document.getElementById(tipo).classList.add('ativo');
+            socket.emit('definir_usuario', { tipo: 'admin', nome: 'Administrador' });
+            mostrar();
+        }
+
+        function escolherCliente() {
+            document.getElementById('modalNome').classList.add('ativo');
+            document.getElementById('inputNome').focus();
+        }
+
+        function confirmarNome() {
+            const nome = document.getElementById('inputNome').value.trim();
+            if (!nome) {
+                avisar('❌ Digite seu nome!', 'erro');
+                return;
+            }
+
+            nomeUsuario = nome;
+            tipo = 'cliente';
+            
+            document.getElementById('modalNome').classList.remove('ativo');
+            document.getElementById('escolha').style.display = 'none';
+            document.getElementById('cliente').classList.add('ativo');
+            
+            socket.emit('definir_usuario', { tipo: 'cliente', nome: nome });
+            socket.emit('acao_cliente', { acao: 'Navegando pelos jogos' });
+            
+            mostrar();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('inputNome').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') confirmarNome();
+            });
+        });
+
+        function mostrar() {
+            if (!tipo) return;
+
+            const onde = tipo === 'admin' ? 'jogosAdmin' : 'jogosCliente';
+            const html = Object.keys(todosJogos).map(function(id) {
+                return criarCard(id, todosJogos[id]);
+            }).join('');
+            document.getElementById(onde).innerHTML = html;
+        }
+
+        function criarCard(id, jogo) {
+            const tem = jogo.ingressos > 0;
+            const preco = jogo.preco;
+            const precoDesconto = preco * 0.9;
+
+            if (tipo === 'admin') {
+                return '<div class="jogo"><div class="times"><div class="time"><img src="' + jogo.escudo_casa + '" class="escudo" alt="' + jogo.casa + '"><span class="nome-time">' + jogo.casa + '</span></div><span class="vs">VS</span><div class="time"><img src="' + jogo.escudo_fora + '" class="escudo" alt="' + jogo.fora + '"><span class="nome-time">' + jogo.fora + '</span></div></div><div class="preco">R$ ' + preco.toFixed(2) + '</div><div class="info">📊 ' + jogo.ingressos + ' disponíveis</div><div class="form-linha"><div><label class="label">💰 Preço (R$)</label><input type="number" id="p' + id + '" step="0.01" value="' + preco.toFixed(2) + '"></div><div><label class="label">🎫 Quantidade</label><input type="number" id="q' + id + '" min="1" value="10"></div></div><button class="botao-acao botao-liberar" onclick="liberar(' + id + ')">🚀 LIBERAR INGRESSOS</button></div>';
+            } else {
+                var badge = jogo.prevenda ? '<div class="prevenda-badge">PRÉ-VENDA -10%</div>' : '';
+                var precoHTML = jogo.prevenda ? '<div class="preco"><span class="preco-original">R$ ' + preco.toFixed(2) + '</span>R$ ' + precoDesconto.toFixed(2) + '</div><div class="timer-prevenda" id="timer_' + id + '">⏰ 10s</div>' : '<div class="preco">R$ ' + preco.toFixed(2) + '</div>';
+                var infoClass = tem ? (jogo.prevenda ? 'prevenda-info' : 'disponivel') : 'esgotado';
+                var infoText = tem ? (jogo.prevenda ? '🔥 PRÉ-VENDA: ' + jogo.ingressos + ' disponíveis' : '✅ ' + jogo.ingressos + ' disponíveis') : '❌ ESGOTADO';
+                var compraHTML = tem ? '<label class="label">🎫 Quantidade</label><input type="number" id="q' + id + '" min="1" max="' + jogo.ingressos + '" value="1" onchange="atualizarAcao(\'Selecionando ' + jogo.casa + ' x ' + jogo.fora + '\')"><button class="botao-acao botao-comprar" onclick="comprar(' + id + ')">' + (jogo.prevenda ? '🔥 COMPRAR NA PRÉ-VENDA' : '🛒 COMPRAR') + '</button>' : '';
+                
+                return '<div class="jogo">' + badge + '<div class="times"><div class="time"><img src="' + jogo.escudo_casa + '" class="escudo" alt="' + jogo.casa + '" onerror="this.src=\'https://via.placeholder.com/60\'"><span class="nome-time">' + jogo.casa + '</span></div><span class="vs">VS</span><div class="time"><img src="' + jogo.escudo_fora + '" class="escudo" alt="' + jogo.fora + '" onerror="this.src=\'https://via.placeholder.com/60\'"><span class="nome-time">' + jogo.fora + '</span></div></div>' + precoHTML + '<div class="info ' + infoClass + '">' + infoText + '</div>' + compraHTML + '</div>';
+            }
+        }
+
+        function liberar(id) {
+            const qtd = parseInt(document.getElementById('q' + id).value);
+            const preco = parseFloat(document.getElementById('p' + id).value);
+            
+            if (!qtd || qtd < 1) return avisar('❌ Quantidade inválida!', 'erro');
+            if (!preco || preco <= 0) return avisar('❌ Preço inválido!', 'erro');
+            
+            socket.emit('liberar', { id: id, qtd: qtd, preco: preco });
+        }
+
+        function comprar(id) {
+            const qtd = parseInt(document.getElementById('q' + id).value);
+            
+            if (!qtd || qtd < 1) return avisar('❌ Quantidade inválida!', 'erro');
+            
+            const jogo = todosJogos[id];
+            atualizarAcao('Comprando ' + qtd + 'x ' + jogo.casa + ' x ' + jogo.fora);
+            
+            socket.emit('comprar', { id: id, qtd: qtd, nome: nomeUsuario });
+        }
+
+        function atualizarAcao(acao) {
+            if (tipo === 'cliente') {
+                socket.emit('acao_cliente', { acao: acao });
+            }
+        }
+
+        function addVenda(v) {
+            const div = document.createElement('div');
+            div.className = 'venda' + (v.desconto ? ' prevenda' : '');
+            div.innerHTML = '<div style="display: flex; justify-content: space-between; align-items: center;"><div><strong style="font-size: 16px;">' + v.nome + '</strong>' + (v.desconto ? '<span class="badge-prevenda">PRÉ-VENDA</span>' : '') + '<div style="color: #64748b; margin-top: 3px; font-size: 14px;">' + v.jogo + '</div></div><div style="text-align: right;"><div style="color: #10b981; font-weight: 700; font-size: 18px;">R$ ' + v.valor.toFixed(2) + '</div><div style="color: #94a3b8; font-size: 12px;">' + v.qtd + 'x • ' + v.hora + '</div></div></div>';
+            const lista = document.getElementById('listaVendas');
+            lista.insertBefore(div, lista.firstChild);
+        }
+
+        function avisar(msg, tipo) {
+            const notif = document.createElement('div');
+            notif.className = 'notif ' + tipo;
+            notif.textContent = msg;
+            document.body.appendChild(notif);
+            setTimeout(function() {
+                notif.remove();
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
