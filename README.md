@@ -137,7 +137,6 @@ venda-ingressos/
 Flask==3.0.0
 Flask-SocketIO==5.3.5
 python-socketio==5.10.0
-simple-websocket==1.0.0
 ```
 
 ---
