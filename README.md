@@ -144,7 +144,10 @@ python-socketio==5.10.0
 ## 👨‍💻 Autor
 
 **Luiz Roberto Sardanha**  
-Estudante - Unidavi de Rio do Sul
+Estudante de Sistemas de Informação  
+Unidavi - Rio do Sul, SC
+
+**Professor Orientador:** Ademar Perfoll Junior
 
 ---
 
