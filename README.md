@@ -37,8 +37,8 @@ Sistema de venda de ingressos para jogos de futebol com comunicação em tempo r
 
 ### Clone o repositório
 ```bash
-git clone https://github.com/Luiz-beto/Venda-Ingressos.git
-cd venda-ingressos
+git clone https://github.com/Luiz-beto/Venda-de-ingressos.git
+cd Venda-de-ingressos
 ```
 
 ### Instale as dependências
